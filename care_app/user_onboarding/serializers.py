@@ -1,37 +1,51 @@
 from rest_framework import serializers
-from django.contrib.auth import authenticate
-from .models import CustomUser
+from django.contrib.auth import get_user_model
+from .models import *
 
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CustomUser
-        fields = ("id", "username", "phone", "email", "role")
+CustomUser = get_user_model()
 
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, min_length=8)
-    confirm_password = serializers.CharField(write_only=True, min_length=8)
-
     class Meta:
         model = CustomUser
-        fields = ("phone", "email", "password", "confirm_password", "role")
+        fields = ["email", "phone_number", "password"]
+        extra_kwargs = {
+            "password": {"write_only": True, "min_length": 6},
+        }
 
     def validate(self, data):
-        if data["password"] != data["confirm_password"]:
-            raise serializers.ValidationError("Passwords do not match")
-        if data["role"] not in dict(CustomUser.ROLE_CHOICES):
-            raise serializers.ValidationError("Invalid role")
+        if not data.get("email") and not data.get("phone_number"):
+            raise serializers.ValidationError("Either email or phone number is required.")
         return data
 
     def create(self, validated_data):
-        validated_data.pop("confirm_password")
-        return CustomUser.objects.create_user(**validated_data)
+        user = CustomUser.objects.create_user(**validated_data)
+        return user
 
 class LoginSerializer(serializers.Serializer):
-    phone = serializers.CharField()
+    identifier = serializers.CharField()  # Can be email or phone number
     password = serializers.CharField(write_only=True)
 
-    def validate(self, data):
-        user = authenticate(phone=data["phone"], password=data["password"])
-        if not user:
-            raise serializers.ValidationError("Invalid credentials")
-        return user
+class PatientSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Patient
+        fields = '__all__'
+
+class EmergencyContactSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmergencyContact
+        fields = '__all__'
+
+class MedicalHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MedicalHistory
+        fields = '__all__'
+
+class PreferredMedicalServicesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PreferredMedicalServices
+        fields = '__all__'
+
+class LifestyleDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LifestyleDetails
+        fields = '__all__'
